@@ -1,30 +1,98 @@
-<!doctype html>
-<head>
-    <title>Hello Azure - Python Quickstart</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap/css/bootstrap.min.css') }}">
-    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
-</head>
-<html>
-   <body>
-     <main>
-        <div class="px-4 py-3 my-2 text-center">
-            <img class="d-block mx-auto mb-4" src="{{ url_for('static', filename='images/azure-icon.svg') }}" alt="Azure Logo" width="192" height="192"/>
-            <!-- <img  src="/docs/5.1/assets/brand/bootstrap-logo.svg" alt="" width="72" height="57"> -->
-            <h1 class="display-6 fw-bold text-primary">Welcome to Azure</h1>            
-          </div>
-        <form method="post" action="{{url_for('hello')}}">
-            <div class="col-md-6 mx-auto text-center">
-                <label for="name" class="form-label fw-bold fs-5">Could you please tell me your name?</label>
+{% extends 'layout.html' %}
 
-                <!-- <p class="lead mb-2">Could you please tell me your name?</p> -->
-                <div class="d-grid gap-2 d-sm-flex justify-content-sm-center align-items-center my-1">
-                    <input type="text" class="form-control" id="name" name="name" style="max-width: 256px;">
-                  </div>            
-                <div class="d-grid gap-2 d-sm-flex justify-content-sm-center my-2">
-                  <button type="submit" class="btn btn-primary btn-lg px-4 gap-3">Say Hello</button>
-                </div>            
+{% block title %}Weather Tracker{% endblock %}
+
+{% block header %}Weather Tracker{% endblock %}
+
+{% block main %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <form id="weatherForm">
+            <div class="input-group mb-3">
+                <input type="text" class="form-control" id="locationInput" placeholder="Enter city name" aria-label="Enter city name" aria-describedby="button-addon2">
+                <button class="btn btn-outline-primary" type="submit" id="searchButton">Search</button>
             </div>
         </form>
-     </main>      
-   </body>
-</html>
+    </div>
+</div>
+
+<div class="row justify-content-center" id="weatherResults">
+    <!-- Weather data will be dynamically populated here -->
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('weatherForm');
+    const locationInput = document.getElementById('locationInput');
+    const weatherResults = document.getElementById('weatherResults');
+
+    // Fetch weather data for user's current location initially
+    fetchWeatherForCurrentLocation();
+
+    form.addEventListener('submit', function(event) {
+        event.preventDefault();
+        const city = locationInput.value.trim();
+        fetchWeather(city);
+    });
+
+    function fetchWeatherForCurrentLocation() {
+        if ('geolocation' in navigator) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                fetch(`/weather?lat=${lat}&lon=${lon}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        displayWeather(data);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching weather:', error);
+                        displayError('Failed to fetch weather data.');
+                    });
+            }, function(error) {
+                console.error('Error getting user location:', error);
+                displayError('Failed to get user location.');
+            });
+        } else {
+            displayError('Geolocation is not supported by this browser.');
+        }
+    }
+
+    function fetchWeather(city) {
+        fetch(`/weather?city=${city}`)
+            .then(response => response.json())
+            .then(data => {
+                displayWeather(data);
+            })
+            .catch(error => {
+                console.error('Error fetching weather:', error);
+                displayError('Failed to fetch weather data.');
+            });
+    }
+
+    function displayWeather(data) {
+        weatherResults.innerHTML = ''; // Clear previous results
+        if (data.main && data.weather) {
+            const weatherCard = `
+                <div class="col-md-4 mb-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">${data.name}</h5>
+                            <p class="card-text">Temperature: ${Math.round(data.main.temp - 273.15)}°C</p>
+                            <p class="card-text">Weather: ${data.weather[0].main}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            weatherResults.innerHTML = weatherCard;
+        } else {
+            displayError('Weather data not available.');
+        }
+    }
+
+    function displayError(message) {
+        weatherResults.innerHTML = `<div class="alert alert-danger" role="alert">${message}</div>`;
+    }
+});
+</script>
+{% endblock %}
