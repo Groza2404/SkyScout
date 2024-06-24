@@ -72,13 +72,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function displayWeather(data) {
         weatherResults.innerHTML = ''; // Clear previous results
-        if (data.main && data.weather) {
+        if (data.current && data.timezone) {
             const weatherCard = `
                 <div class="col-md-4 mb-4">
                     <div class="card">
                         <div class="card-body">
-                            <h5 class="card-title">${data.name}</h5>
-                            <p class="card-text">Temperature: ${Math.round(data.main.temp - 273.15)}°C</p>
+                            <h5 class="card-title">${data.timezone}</h5>
+                            <p class="card-text">Temperature: ${Math.round(data.current.temp - 273.15)}°C</p>
                             <p class="card-text">Weather: ${data.weather[0].main}</p>
                         </div>
                     </div>

@@ -6,12 +6,14 @@ import requests
 
 app = Flask(__name__)
 
-api_key = 'THE_KEY'
+api_key = 'b9e3a01988effd916a53213a095e0550'
 
 def get_user_location():
     try:
-        response = requests.get('https://ipinfo.io/json')
+        ip_addr = request.remote_addr
+        response = requests.get(f'https://ipinfo.io/{ip_addr}?token=2b5580d0ce75ed')
         data = response.json()
+        city = data.get('city')
         coordinates = data.get('loc', '').split(',')
         if len(coordinates) == 2:
             lat, lon = coordinates
@@ -42,9 +44,9 @@ def get_weather():
             return jsonify({'error': 'Unable to determine user location.'}), 400
 
     if city:
-        url = f'http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}'
+        url = f'http://api.openweathermap.org/geo/1.0/direct?q={city}&limit={2}&appid={api_key}'
     elif lat and lon:
-        url = f'http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}'
+        url = f'https://api.openweathermap.org/data/3.0/onecall?lat={lat}&lon={lon}&appid={api_key}'
     else:
         return jsonify({'error': 'Invalid request parameters.'}), 400
 
