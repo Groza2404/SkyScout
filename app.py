@@ -54,6 +54,7 @@ def get_weather():
         return jsonify(data)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
 
 
 if __name__ == '__main__':
