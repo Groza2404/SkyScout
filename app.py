@@ -10,7 +10,7 @@ api_key = 'b9e3a01988effd916a53213a095e0550'
 
 def get_user_location():
     try:
-        ip_addr = request.remote_addr
+        ip_addr = request.headers.get('X-Forwarded-For', request.remote_addr)
         response = requests.get(f'https://ipinfo.io/{ip_addr}?token=2b5580d0ce75ed')
         data = response.json()
         city = data.get('city')
@@ -24,6 +24,22 @@ def get_user_location():
         print(f"Error getting user's location: {e}")
         return None
     
+def fecth_coords(city):
+    url = f'http://api.openweathermap.org/geo/1.0/direct?q={city}&limit={2}&appid={api_key}'
+    response = requests.get(url)
+    response.raise_for_status()
+    data = response.json()
+    if data:
+        return data[0]
+    return None
+
+
+def fetch_weather(lat, lon):
+    url = f'https://api.openweathermap.org/data/3.0/onecall?lat={lat}&lon={lon}&appid={api_key}'
+    response = requests.get(url)
+    response.raise_for_status()
+    return response.json()
+    
 
 @app.route('/')
 def index():
@@ -31,31 +47,39 @@ def index():
 
 @app.route('/weather', methods=['GET'])
 def get_weather():
-    city = request.args.get('city')
-    lat = request.args.get('lat')
-    lon = request.args.get('lon')
-
-    if not city and (not lat or not lon):
-        # Attempt to get user's location based on IP address or browser geolocation
-        user_location = get_user_location()
-        if user_location:
-            lat, lon = user_location['lat'], user_location['lon']
-        else:
-            return jsonify({'error': 'Unable to determine user location.'}), 400
-
-    if city:
-        url = f'http://api.openweathermap.org/geo/1.0/direct?q={city}&limit={2}&appid={api_key}'
-    elif lat and lon:
-        url = f'https://api.openweathermap.org/data/3.0/onecall?lat={lat}&lon={lon}&appid={api_key}'
-    else:
-        return jsonify({'error': 'Invalid request parameters.'}), 400
-
     try:
-        response = requests.get(url)
-        data = response.json()
+        city = request.args.get('city')
+        lat = request.args.get('lat')
+        lon = request.args.get('lon')
+
+        if not city and (not lat or not lon):
+            # Attempt to get user's location based on IP address or browser geolocation
+            user_location = get_user_location()
+            if user_location:
+                lat, lon = user_location['lat'], user_location['lon']
+            else:
+                return jsonify({'error': 'Unable to determine user location.'}), 400
+
+        if city:
+            location = fecth_coords(city)
+            if location:
+                lat = location['lat']
+                lon = location['lon']
+            else:
+                return jsonify({'error' : 'Latitude and longitude are required.'}), 400
+        if not lat or not lon:
+            return jsonify({'error': 'Invalid request parameters.'}), 400
+
+        data = fetch_weather(lat, lon)
         return jsonify(data)
+    
+    except requests.RequestException as e:
+        app.logger.error(f"Error fetching weather data: {e}")
+        return jsonify({'error': 'Failed to fetch weather data.'}), 500 
+
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.error(f"Unexpected error : {e}")
+        return jsonify({'error': 'An unexpected error occurred.'}), 500
     
 
 

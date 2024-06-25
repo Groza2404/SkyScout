@@ -32,7 +32,9 @@ document.addEventListener('DOMContentLoaded', function() {
     form.addEventListener('submit', function(event) {
         event.preventDefault();
         const city = locationInput.value.trim();
-        fetchWeather(city);
+        if (city) {
+            fetchWeather(city);
+        }
     });
 
     function fetchWeatherForCurrentLocation() {
@@ -62,7 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch(`/weather?city=${city}`)
             .then(response => response.json())
             .then(data => {
-                displayWeather(data);
+                displayWeather(data, city);
             })
             .catch(error => {
                 console.error('Error fetching weather:', error);
@@ -70,16 +72,19 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
-    function displayWeather(data) {
+    function displayWeather(data, city = '') {
+        console.log('Weather data received:', data);
         weatherResults.innerHTML = ''; // Clear previous results
         if (data.current && data.timezone) {
+            const descpr = data.current.weather[0];
+            const title = city || data.timezone;
             const weatherCard = `
                 <div class="col-md-4 mb-4">
                     <div class="card">
                         <div class="card-body">
-                            <h5 class="card-title">${data.timezone}</h5>
+                            <h5 class="card-title">${title}</h5>
                             <p class="card-text">Temperature: ${Math.round(data.current.temp - 273.15)}°C</p>
-                            <p class="card-text">Weather: ${data.weather[0].main}</p>
+                            <p class="card-text">Weather: ${descpr.description}</p>
                         </div>
                     </div>
                 </div>
