@@ -7,6 +7,7 @@ import requests
 app = Flask(__name__)
 
 api_key = 'b9e3a01988effd916a53213a095e0550'
+azure_func_url = 'AZFUNCTURL'
 
 def get_user_location():
     try:
@@ -81,6 +82,22 @@ def get_weather():
         app.logger.error(f"Unexpected error : {e}")
         return jsonify({'error': 'An unexpected error occurred.'}), 500
     
+@app.route('/enhanced_forecast', methods=['POST'])
+def enhanced_forecast():
+    try:
+        data = request.json
+        response = requests.post(azure_func_url, json=data)
+        response.raise_for_status()
+        enhanced_data = response.json()
+        return jsonify(enhanced_data)
+    
+    except requests.RequestException as e:
+        app.logger.error(f"Error calling Azure Function: {e}")
+        return jsonify({'error': 'Failed to fetch enhanced weather data.'}), 500 
+
+    except Exception as e:
+        app.logger.error(f"Unexpected error : {e}")
+        return jsonify({'error': 'An unexpected error occurred.'}), 500
 
 
 if __name__ == '__main__':
