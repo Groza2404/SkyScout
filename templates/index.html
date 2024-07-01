@@ -13,6 +13,7 @@
                 <button class="btn btn-outline-primary" type="submit" id="searchButton">Search</button>
             </div>
         </form>
+        <button class="btn btn-outline-secondary" id="enhancedForecastBtn" style="display: none;">Enhanced Forecast</button>
     </div>
 </div>
 
@@ -25,6 +26,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('weatherForm');
     const locationInput = document.getElementById('locationInput');
     const weatherResults = document.getElementById('weatherResults');
+    const enhancedForecastBtn = document.getElementById('enhancedForecastBtn');
+
+    let currentData = null;
 
     // Fetch weather data for user's current location initially
     fetchWeatherForCurrentLocation();
@@ -37,6 +41,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    enhancedForecastBtn.addEventListener('click', function(event) {
+        if (currentData) {
+            fetchEnhancedForecast(currentData);
+        } else {
+            displayError('Please search for weather data first.')
+        }
+    })
+
     function fetchWeatherForCurrentLocation() {
         if ('geolocation' in navigator) {
             navigator.geolocation.getCurrentPosition(function(position) {
@@ -45,6 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 fetch(`/weather?lat=${lat}&lon=${lon}`)
                     .then(response => response.json())
                     .then(data => {
+                        currentData = data;
                         displayWeather(data);
                     })
                     .catch(error => {
@@ -64,12 +77,32 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch(`/weather?city=${city}`)
             .then(response => response.json())
             .then(data => {
+                currentData = data;
                 displayWeather(data, city);
+                enhancedForecastBtn.style.display = 'block';
             })
             .catch(error => {
                 console.error('Error fetching weather:', error);
                 displayError('Failed to fetch weather data.');
             });
+    }
+
+    function fetchEnhancedForecast(currentData) {
+        fetch('/enhanced_forecast', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(currentData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            displayEnhancedForecast(data);
+        })
+        .catch(error => {
+            console.error('Error fetching enhanced forecast:', error);
+            displayError('Failed to fetch enhanced forecast.');
+        });
     }
 
     function displayWeather(data, city = '') {
@@ -90,13 +123,51 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             `;
             weatherResults.innerHTML = weatherCard;
+
+            if (data.alerts && data.alerts.length > 0) {
+            const alertMsg = data.alerts[0].description;
+            displayAlert(alertMsg);
+        }
         } else {
             displayError('Weather data not available.');
         }
     }
 
+    function displayEnhancedForecast(data, city = '') {
+        console.log('Enhanced forecast data received:', data);
+
+        weatherResults.innerHTML = '';
+        if (data.forecast) {
+            const title = city || data.timezone;
+            const forecastCard = `
+                <div class="col-md-4 mb-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">${title} - Enhanced Forecast</h5>
+                            <p class="card-text">Temperature: ${Math.round(data.forecast.temp - 273.15)}°C</p>
+                            <p class="card-text">Weather: ${data.forecast.weather}</p>
+                            <p class="card-text">Humidity: ${data.forecast.humidity}%</p>
+                            <p class="card-text">Wind Speed: ${data.forecast.wind_speed} m/s</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            weatherResults.innerHTML = forecastCard;
+        } else {
+            displayError('Enhanced forecast data not available.');
+        }
+    }
+
     function displayError(message) {
         weatherResults.innerHTML = `<div class="alert alert-danger" role="alert">${message}</div>`;
+    }
+
+    function displayAlert(alertMsg) {
+        const alertDiv = document.createElement('div');
+        alertDiv.classname = 'alert alert-warning';
+        alertDiv.setAttribute('role', 'alert');
+        alertDiv.innerText = `Weather Alert: ${alertMsg}`;
+        weatherResults.appendChild(alertDiv);
     }
 });
 </script>
